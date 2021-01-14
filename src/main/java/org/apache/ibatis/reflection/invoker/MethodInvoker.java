@@ -15,17 +15,24 @@
  */
 package org.apache.ibatis.reflection.invoker;
 
+import org.apache.ibatis.reflection.Reflector;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
-import org.apache.ibatis.reflection.Reflector;
 
 /**
  * @author Clinton Begin
  */
 public class MethodInvoker implements Invoker {
 
+  /**
+   * 类型
+   */
   private final Class<?> type;
+
+  /**
+   * 指定方法
+   */
   private final Method method;
 
   public MethodInvoker(Method method) {
