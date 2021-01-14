@@ -57,8 +57,18 @@ public class PropertyParser {
   }
 
   private static class VariableTokenHandler implements TokenHandler {
+    /**
+     * 变量 Properties 对象
+     */
     private final Properties variables;
+    /**
+     * 是否开启默认值功能。默认为 {@link #ENABLE_DEFAULT_VALUE}
+     */
     private final boolean enableDefaultValue;
+
+    /**
+     * 默认值的分隔符。默认为 {@link #KEY_DEFAULT_VALUE_SEPARATOR} ，即 ":" 。
+     */
     private final String defaultValueSeparator;
 
     private VariableTokenHandler(Properties variables) {
