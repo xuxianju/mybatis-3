@@ -15,14 +15,6 @@
  */
 package org.apache.ibatis.executor;
 
-import java.sql.BatchUpdateException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
@@ -35,6 +27,14 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
+import java.sql.BatchUpdateException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author Jeff Butler
  */
@@ -42,9 +42,23 @@ public class BatchExecutor extends BaseExecutor {
 
   public static final int BATCH_UPDATE_RETURN_VALUE = Integer.MIN_VALUE + 1002;
 
+  /**
+   * Statement 数组
+   */
   private final List<Statement> statementList = new ArrayList<>();
+  /**
+   * BatchResult 数组
+   *
+   * 每一个 BatchResult 元素，对应一个 {@link #statementList} 的 Statement 元素
+   */
   private final List<BatchResult> batchResultList = new ArrayList<>();
+  /**
+   * 当前 SQL
+   */
   private String currentSql;
+  /**
+   * 当前 MappedStatement 对象
+   */
   private MappedStatement currentStatement;
 
   public BatchExecutor(Configuration configuration, Transaction transaction) {
@@ -54,10 +68,12 @@ public class BatchExecutor extends BaseExecutor {
   @Override
   public int doUpdate(MappedStatement ms, Object parameterObject) throws SQLException {
     final Configuration configuration = ms.getConfiguration();
+    // <1> 创建 StatementHandler 对象
     final StatementHandler handler = configuration.newStatementHandler(this, ms, parameterObject, RowBounds.DEFAULT, null, null);
     final BoundSql boundSql = handler.getBoundSql();
     final String sql = boundSql.getSql();
     final Statement stmt;
+    // <2> 如果匹配最后一次 currentSql 和 currentStatement ，则聚合到 BatchResult 中
     if (sql.equals(currentSql) && ms.equals(currentStatement)) {
       int last = statementList.size() - 1;
       stmt = statementList.get(last);

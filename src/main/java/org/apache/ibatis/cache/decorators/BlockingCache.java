@@ -15,12 +15,12 @@
  */
 package org.apache.ibatis.cache.decorators;
 
+import org.apache.ibatis.cache.Cache;
+import org.apache.ibatis.cache.CacheException;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.ibatis.cache.Cache;
-import org.apache.ibatis.cache.CacheException;
 
 /**
  * <p>Simple blocking decorator
@@ -35,7 +35,9 @@ import org.apache.ibatis.cache.CacheException;
  *
  */
 public class BlockingCache implements Cache {
-
+  /**
+   * 实现 Cache 接口，阻塞的 Cache 实现类
+   */
   private long timeout;
   private final Cache delegate;
   private final ConcurrentHashMap<Object, CountDownLatch> locks;
@@ -66,9 +68,12 @@ public class BlockingCache implements Cache {
 
   @Override
   public Object getObject(Object key) {
+    // <1.1> 获得锁
     acquireLock(key);
+    // <1.2> 获得缓存值
     Object value = delegate.getObject(key);
     if (value != null) {
+      // <1.3> 释放锁
       releaseLock(key);
     }
     return value;

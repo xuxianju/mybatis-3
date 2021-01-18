@@ -15,17 +15,22 @@
  */
 package org.apache.ibatis.executor;
 
+import org.apache.ibatis.mapping.MappedStatement;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.ibatis.mapping.MappedStatement;
 
 /**
  * @author Jeff Butler
  */
 public class BatchResult {
-
+  /**
+   * MappedStatement 对象
+   */
   private final MappedStatement mappedStatement;
+  /**
+   * SQL
+   */
   private final String sql;
   private final List<Object> parameterObjects;
 
