@@ -42,6 +42,9 @@ public class PooledDataSource implements DataSource {
 
   private final PoolState state = new PoolState(this);
 
+  /**
+   * UnpooledDataSource 对象
+   */
   private final UnpooledDataSource dataSource;
 
   // OPTIONAL CONFIGURATION FIELDS
@@ -329,21 +332,28 @@ public class PooledDataSource implements DataSource {
    */
   public void forceCloseAll() {
     synchronized (state) {
+      // 计算 expectedConnectionTypeCode
       expectedConnectionTypeCode = assembleConnectionTypeCode(dataSource.getUrl(), dataSource.getUsername(), dataSource.getPassword());
+      // 遍历 activeConnections ，进行关闭
       for (int i = state.activeConnections.size(); i > 0; i--) {
         try {
+          // 设置为失效
           PooledConnection conn = state.activeConnections.remove(i - 1);
           conn.invalidate();
 
+          // 回滚事务，如果有事务未提交或回滚
           Connection realConn = conn.getRealConnection();
           if (!realConn.getAutoCommit()) {
             realConn.rollback();
           }
+          // 关闭真实的连接
           realConn.close();
         } catch (Exception e) {
           // ignore
         }
       }
+      // 遍历 idleConnections ，进行关闭
+      //【实现代码上，和上面是一样的】
       for (int i = state.idleConnections.size(); i > 0; i--) {
         try {
           PooledConnection conn = state.idleConnections.remove(i - 1);
@@ -364,6 +374,9 @@ public class PooledDataSource implements DataSource {
     }
   }
 
+  /**
+   * PoolState 对象，记录池化的状态
+   */
   public PoolState getPoolState() {
     return state;
   }
@@ -533,8 +546,9 @@ public class PooledDataSource implements DataSource {
    * @return True if the connection is still usable
    */
   protected boolean pingConnection(PooledConnection conn) {
+    // 记录是否 ping 成功
     boolean result = true;
-
+    // 判断真实的连接是否已经关闭。若已关闭，就意味着 ping 肯定是失败的。
     try {
       result = !conn.getRealConnection().isClosed();
     } catch (SQLException e) {
@@ -544,12 +558,14 @@ public class PooledDataSource implements DataSource {
       result = false;
     }
 
+    // 是否启用侦测查询 // 判断是否长时间未使用。若是，才需要发起 ping
     if (result && poolPingEnabled && poolPingConnectionsNotUsedFor >= 0
         && conn.getTimeElapsedSinceLastUse() > poolPingConnectionsNotUsedFor) {
       try {
         if (log.isDebugEnabled()) {
           log.debug("Testing connection " + conn.getRealHashCode() + " ...");
         }
+        // 通过执行 poolPingQuery 语句来发起 ping
         Connection realConn = conn.getRealConnection();
         try (Statement statement = realConn.createStatement()) {
           statement.executeQuery(poolPingQuery).close();
@@ -557,6 +573,7 @@ public class PooledDataSource implements DataSource {
         if (!realConn.getAutoCommit()) {
           realConn.rollback();
         }
+        // 标记执行成功
         result = true;
         if (log.isDebugEnabled()) {
           log.debug("Connection " + conn.getRealHashCode() + " is GOOD!");
@@ -564,6 +581,7 @@ public class PooledDataSource implements DataSource {
       } catch (Exception e) {
         log.warn("Execution of ping query '" + poolPingQuery + "' failed: " + e.getMessage());
         try {
+          // 关闭数据库真实的连接
           conn.getRealConnection().close();
         } catch (Exception e2) {
           // ignore
