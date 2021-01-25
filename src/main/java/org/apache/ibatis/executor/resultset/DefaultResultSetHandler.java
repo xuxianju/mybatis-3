@@ -93,9 +93,19 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   private final Map<CacheKey, List<PendingRelation>> pendingRelations = new HashMap<>();
 
   // Cached Automappings
+  /**
+   * 自动映射的缓存
+   *
+   * KEY：{@link ResultMap#getId()} + ":" +  columnPrefix
+   *
+   * @see #createRowKeyForUnmappedProperties(ResultMap, ResultSetWrapper, CacheKey, String)
+   */
   private final Map<String, List<UnMappedColumnAutoMapping>> autoMappingsCache = new HashMap<>();
 
   // temporary marking flag that indicate using constructor mapping (use field to reduce memory usage)
+  /**
+   * 是否使用构造方法创建该结果对象
+   */
   private boolean useConstructorMappings;
 
   private static class PendingRelation {
@@ -346,12 +356,20 @@ public class DefaultResultSetHandler implements ResultSetHandler {
 
   private void handleRowValuesForSimpleResultMap(ResultSetWrapper rsw, ResultMap resultMap, ResultHandler<?> resultHandler, RowBounds rowBounds, ResultMapping parentMapping)
       throws SQLException {
+    // <1> 创建 DefaultResultContext 对象
     DefaultResultContext<Object> resultContext = new DefaultResultContext<>();
+    // <2> 获得 ResultSet 对象，并跳到 rowBounds 指定的开始位置
     ResultSet resultSet = rsw.getResultSet();
     skipRows(resultSet, rowBounds);
-    while (shouldProcessMoreRows(resultContext, rowBounds) && !resultSet.isClosed() && resultSet.next()) {
+    // <3> 循环
+    while (shouldProcessMoreRows(resultContext, rowBounds) // 是否继续处理 ResultSet
+      && !resultSet.isClosed() // ResultSet 是否已经关闭
+      && resultSet.next()) {  // ResultSet 是否还有下一条
+      // <4> 根据该行记录以及 ResultMap.discriminator ，决定映射使用的 ResultMap 对象
       ResultMap discriminatedResultMap = resolveDiscriminatedResultMap(resultSet, resultMap, null);
+      // <5> 根据最终确定的 ResultMap 对 ResultSet 中的该行记录进行映射，得到映射后的结果对象
       Object rowValue = getRowValue(rsw, discriminatedResultMap, null);
+      // <6> 将映射创建的结果对象添加到 ResultHandler.resultList 中保存
       storeObject(resultHandler, resultContext, rowValue, parentMapping, resultSet);
     }
   }
